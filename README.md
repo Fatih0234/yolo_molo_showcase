@@ -22,3 +22,25 @@ Follow the steps below to set up the application in your environment:
 ```bash
 git clone https://github.com/Fatih0234/yolo_molo_showcase.git
 cd yolo_molo_showcase
+
+
+### 2. Create a Virtual Environment
+
+It's recommended to use a virtual environment to manage dependencies:
+
+```bash
+python -m venv venv
+
+### Activate the Virtual Environment
+
+- **On Windows**:
+    ```bash
+    venv\Scripts\activate
+    ```
+
+- **On Linux/Mac**:
+    ```bash
+    source venv/bin/activate
+    ```
+
+
