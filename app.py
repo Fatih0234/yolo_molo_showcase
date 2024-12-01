@@ -115,14 +115,12 @@ if uploaded_file and selected_class_names:
     else:
         st.error("Failed to generate the annotated video. Please try again.")
 
+    import shutil
+
     # Cleanup temporary files
     if os.path.exists("temp_input"):
-        for temp_file in os.listdir("temp_input"):
-            os.remove(os.path.join("temp_input", temp_file))
-        os.rmdir("temp_input")
+        shutil.rmtree("temp_input", ignore_errors=True)
 
     if os.path.exists(output_dir):
-        for temp_file in os.listdir(os.path.join(output_dir, "run")):
-            os.remove(os.path.join(output_dir, "run", temp_file))
-        os.rmdir(os.path.join(output_dir, "run"))
-        os.rmdir(output_dir)
+        shutil.rmtree(output_dir, ignore_errors=True)
+
