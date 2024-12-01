@@ -2,7 +2,6 @@ import streamlit as st
 from ultralytics import YOLO
 import os
 import shutil
-import ffmpeg
 
 # Helper function to save uploaded file
 def save_uploaded_file(uploaded_file, save_path):
@@ -10,45 +9,66 @@ def save_uploaded_file(uploaded_file, save_path):
         f.write(uploaded_file.getbuffer())
     return save_path
 
-# Function to run YOLO and convert output to .mp4
-def run_yolo_and_convert_to_mp4(model_path, input_video_path, output_dir, confidence, selected_classes):
-    # Load the YOLO model
+def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, selected_classes, file_type):
+    # Define the run folder path
+    run_folder = os.path.join(output_dir, "run")
+    
+    # Remove the run folder if it exists
+    if os.path.exists(run_folder):
+        shutil.rmtree(run_folder)
+    
+    # Load YOLO model
     model = YOLO(model_path)
 
-    # Predict and save the results
+    # Run detection and save results
     results = model.predict(
-        source=input_video_path,
+        source=input_file_path,
         conf=confidence,
         save=True,
         project=output_dir,
-        name="run",
+        name="run",  # Always use the same folder name
         classes=selected_classes
     )
 
-    # Define the paths
-    output_avi_path = os.path.join(output_dir, "run", os.path.basename(input_video_path).replace(".mp4", ".avi"))
-    output_mp4_path = output_avi_path.replace(".avi", ".mp4")
+    # Handle different file types
+    if file_type == "video":
+        # Process video
+        output_avi_path = os.path.abspath(os.path.join(run_folder, os.path.basename(input_file_path).replace(".mp4", ".avi")))
+        output_mp4_path = output_avi_path.replace(".avi", ".mp4")
 
-    # Convert .avi to .mp4
-    if os.path.exists(output_avi_path):
+        if not os.path.exists(output_avi_path):
+            raise FileNotFoundError(f"AVI file not found: {output_avi_path}")
+
         try:
-            # Use ffmpeg-python to convert .avi to .mp4
-            (
-                ffmpeg
-                .input(output_avi_path)
-                .output(output_mp4_path, vcodec='libx264', preset='fast', crf=22)
-                .run()
+            # Convert to MP4
+            import subprocess
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-i", output_avi_path,
+                    "-vcodec", "libx264",
+                    "-preset", "fast",
+                    "-crf", "22",
+                    output_mp4_path
+                ],
+                check=True
             )
-            os.remove(output_avi_path)  # Remove the .avi file
-        except ffmpeg.Error as e:
-            st.error(f"Error during video conversion: {e}")
-            return None
+            os.remove(output_avi_path)  # Cleanup AVI file
+            return output_mp4_path
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"FFmpeg conversion failed: {e}")
 
-    return output_mp4_path
+    elif file_type == "image":
+        # Process image
+        output_image_path = os.path.abspath(os.path.join(run_folder, os.path.basename(input_file_path)))
+        if not os.path.exists(output_image_path):
+            raise FileNotFoundError(f"Processed image not found: {output_image_path}")
+        return output_image_path
+
 
 # Initialize Streamlit session state
-if "processed_video" not in st.session_state:
-    st.session_state["processed_video"] = None
+if "processed_file" not in st.session_state:
+    st.session_state["processed_file"] = None
 if "uploaded_file_path" not in st.session_state:
     st.session_state["uploaded_file_path"] = None
 
@@ -90,35 +110,54 @@ if uploaded_file and (st.session_state["uploaded_file_path"] != uploaded_file.na
     output_dir = "temp_output"
     os.makedirs(output_dir, exist_ok=True)
 
-    # Run YOLO and convert output to .mp4
+    # Determine file type (image or video)
+    file_ext = uploaded_file.name.split(".")[-1].lower()
+    file_type = "image" if file_ext in ["jpg", "jpeg", "png"] else "video"
+
+    # Run YOLO and process the file
     st.write("### Running detection...")
     with st.spinner("Detecting objects. This might take a while..."):
-        output_video = run_yolo_and_convert_to_mp4(
+        processed_file = run_yolo_and_process(
             model_path=model_name,
-            input_video_path=input_path,
+            input_file_path=input_path,
             output_dir=output_dir,
             confidence=confidence_threshold,
-            selected_classes=selected_class_ids
+            selected_classes=selected_class_ids,
+            file_type=file_type
         )
-        st.session_state["processed_video"] = output_video
+        st.session_state["processed_file"] = processed_file
 
-# Step 5: Display and download the result
-if st.session_state["processed_video"]:
-    st.write("### Annotated Output")
-    st.video(st.session_state["processed_video"])
+# Display results only if a file has been uploaded and processed
+if st.session_state["processed_file"]:
+    if os.path.exists(st.session_state["processed_file"]):
+        file_ext = st.session_state["processed_file"].split(".")[-1].lower()
+        if file_ext in ["mp4"]:
+            st.write("### Annotated Output Video")
+            st.video(st.session_state["processed_file"])
+        else:
+            st.write("### Annotated Output Image")
+            st.image(st.session_state["processed_file"])
 
-    with open(st.session_state["processed_video"], "rb") as file:
-        st.download_button(
-            label="Download Annotated Video",
-            data=file,
-            file_name=f"annotated_{st.session_state['uploaded_file_path']}",
-            mime="video/mp4"
-        )
+        with open(st.session_state["processed_file"], "rb") as file:
+            st.download_button(
+                label="Download Annotated File",
+                data=file,
+                file_name=f"annotated_{st.session_state['uploaded_file_path']}",
+                mime="video/mp4" if file_ext == "mp4" else "image/jpeg"
+            )
+    else:
+        st.error("Processed file not found. Please try again.")
+elif uploaded_file is None:
+    # Do not show any error message if no file has been uploaded
+    pass
+
 
 # Cleanup temporary files
-if st.session_state["processed_video"] is None and st.session_state["uploaded_file_path"] is None:
+if st.session_state["processed_file"] is None and st.session_state["uploaded_file_path"] is None:
     if os.path.exists("temp_input"):
         shutil.rmtree("temp_input", ignore_errors=True)
 
     if os.path.exists("temp_output"):
         shutil.rmtree("temp_output", ignore_errors=True)
+        
+        
