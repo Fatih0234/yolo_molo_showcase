@@ -1,7 +1,7 @@
 import streamlit as st
 from ultralytics import YOLO
 import os
-import subprocess
+import shutil
 import ffmpeg
 
 # Helper function to save uploaded file
@@ -9,7 +9,6 @@ def save_uploaded_file(uploaded_file, save_path):
     with open(save_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     return save_path
-
 
 # Function to run YOLO and convert output to .mp4
 def run_yolo_and_convert_to_mp4(model_path, input_video_path, output_dir, confidence, selected_classes):
@@ -47,6 +46,12 @@ def run_yolo_and_convert_to_mp4(model_path, input_video_path, output_dir, confid
 
     return output_mp4_path
 
+# Initialize Streamlit session state
+if "processed_video" not in st.session_state:
+    st.session_state["processed_video"] = None
+if "uploaded_file_path" not in st.session_state:
+    st.session_state["uploaded_file_path"] = None
+
 # App Introduction
 st.title("YOLO Ultralytics Object Detection Web App")
 
@@ -73,17 +78,13 @@ confidence_threshold = st.slider("Confidence Threshold:", min_value=0.0, max_val
 # Step 4: Upload a video or image
 uploaded_file = st.file_uploader("Upload an Image or Video (Max 50MB):", type=["jpg", "jpeg", "png", "mp4"])
 
-# Ensure file size limits
-if uploaded_file and uploaded_file.size > 50 * 1024 * 1024:
-    st.error("File size exceeds 50MB limit. Please upload a smaller file.")
-    uploaded_file = None
-
-# Step 5: Perform detection
-if uploaded_file and selected_class_names:
+# Check if a new file is uploaded
+if uploaded_file and (st.session_state["uploaded_file_path"] != uploaded_file.name):
     # Save the uploaded file temporarily
     input_path = os.path.join("temp_input", uploaded_file.name)
     os.makedirs("temp_input", exist_ok=True)
     save_uploaded_file(uploaded_file, input_path)
+    st.session_state["uploaded_file_path"] = uploaded_file.name
 
     # Output directory for annotated files
     output_dir = "temp_output"
@@ -99,28 +100,25 @@ if uploaded_file and selected_class_names:
             confidence=confidence_threshold,
             selected_classes=selected_class_ids
         )
+        st.session_state["processed_video"] = output_video
 
-    # Display and provide a download button for the output
-    if output_video:
-        st.write("### Annotated Output")
-        st.video(output_video)
+# Step 5: Display and download the result
+if st.session_state["processed_video"]:
+    st.write("### Annotated Output")
+    st.video(st.session_state["processed_video"])
 
-        with open(output_video, "rb") as file:
-            st.download_button(
-                label="Download Annotated Video",
-                data=file,
-                file_name=f"annotated_{uploaded_file.name.replace('.avi', '.mp4')}",
-                mime="video/mp4"
-            )
-    else:
-        st.error("Failed to generate the annotated video. Please try again.")
+    with open(st.session_state["processed_video"], "rb") as file:
+        st.download_button(
+            label="Download Annotated Video",
+            data=file,
+            file_name=f"annotated_{st.session_state['uploaded_file_path']}",
+            mime="video/mp4"
+        )
 
-    import shutil
-
-    # Cleanup temporary files
+# Cleanup temporary files
+if st.session_state["processed_video"] is None and st.session_state["uploaded_file_path"] is None:
     if os.path.exists("temp_input"):
         shutil.rmtree("temp_input", ignore_errors=True)
 
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir, ignore_errors=True)
-
+    if os.path.exists("temp_output"):
+        shutil.rmtree("temp_output", ignore_errors=True)
