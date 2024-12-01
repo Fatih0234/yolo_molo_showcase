@@ -22,7 +22,7 @@ Follow the steps below to set up the application in your environment:
 ```bash
 git clone https://github.com/Fatih0234/yolo_molo_showcase.git
 cd yolo_molo_showcase
-
+```
 
 ### 2. Create a Virtual Environment
 
