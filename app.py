@@ -2,12 +2,14 @@ import streamlit as st
 from ultralytics import YOLO
 import os
 import subprocess
+import ffmpeg
 
 # Helper function to save uploaded file
 def save_uploaded_file(uploaded_file, save_path):
     with open(save_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     return save_path
+
 
 # Function to run YOLO and convert output to .mp4
 def run_yolo_and_convert_to_mp4(model_path, input_video_path, output_dir, confidence, selected_classes):
@@ -31,12 +33,15 @@ def run_yolo_and_convert_to_mp4(model_path, input_video_path, output_dir, confid
     # Convert .avi to .mp4
     if os.path.exists(output_avi_path):
         try:
-            subprocess.run(
-                ['ffmpeg', '-i', output_avi_path, '-c:v', 'libx264', '-preset', 'fast', '-crf', '22', '-y', output_mp4_path],
-                check=True
+            # Use ffmpeg-python to convert .avi to .mp4
+            (
+                ffmpeg
+                .input(output_avi_path)
+                .output(output_mp4_path, vcodec='libx264', preset='fast', crf=22)
+                .run()
             )
             os.remove(output_avi_path)  # Remove the .avi file
-        except subprocess.CalledProcessError as e:
+        except ffmpeg.Error as e:
             st.error(f"Error during video conversion: {e}")
             return None
 
