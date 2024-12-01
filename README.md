@@ -30,7 +30,7 @@ It's recommended to use a virtual environment to manage dependencies:
 
 ```bash
 python -m venv venv
-
+```
 ### Activate the Virtual Environment
 
 - **On Windows**:
