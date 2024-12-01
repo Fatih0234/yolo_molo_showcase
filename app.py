@@ -3,6 +3,23 @@ from ultralytics import YOLO
 import os
 import shutil
 
+# Function to display author credits
+def display_credits():
+    st.markdown("---")
+    st.markdown("### About this Web App")
+    st.write("This web application was developed by [Fatih Karahan].")
+    
+    # Contact and social links
+    st.markdown("""
+    **Contact Details:**
+
+    - 📧 Email: [sekanti02@gmail.com](mailto:sekanti02@gmail.com)
+    - 💼 LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/fatih-karahan-717931193/)
+    - 🐙 GitHub: [GitHub Repository](https://github.com/Fatih0234/yolo_molo_showcase)
+    """)
+    st.write("Feel free to reach out for feedback, suggestions, or collaborations!")
+    st.markdown("---")
+
 # Helper function to save uploaded file
 def save_uploaded_file(uploaded_file, save_path):
     with open(save_path, "wb") as f:
@@ -73,30 +90,64 @@ if "uploaded_file_path" not in st.session_state:
     st.session_state["uploaded_file_path"] = None
 
 # App Introduction
-st.title("YOLO Ultralytics Object Detection Web App")
+st.title("YOLO Ultralytics Object Detection Playground 🎯")
 
 st.write("""
-This interactive web application demonstrates the capabilities of the **COCO dataset** in conjunction with **YOLO models**. 
-Users can explore and compare the performance of various YOLO Ultralytics models (e.g., yolov8n, yolov8s, yolov8m) 
-by uploading images or videos and selecting specific classes for object detection.
+Welcome to the **YOLO Ultralytics Object Detection Playground**! This web app allows you to:
+1. **Select YOLO Models**: Choose from lightweight models for small devices or powerful models for high accuracy.
+2. **Filter Classes**: Specify the object classes you want to detect from the COCO dataset.
+3. **Set Confidence Levels**: Adjust the detection confidence threshold to fine-tune the results.
+4. **Upload Files**: Upload images or videos to see YOLO in action under different settings.
+
+📝 **Pro Tip:** Start by selecting a model, then choose classes, adjust confidence, and finally upload your file.
 """)
 
 # Step 1: Model selection
-model_choices = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt"]
-model_name = st.selectbox("Choose a YOLO model:", model_choices)
+st.write("### Step 1: Choose a YOLO Model 🔍")
+model_choices = [
+    "yolov8n.pt - Small model, recommended ✅",
+    "yolov8s.pt - Medium model",
+    "yolov8m.pt - Larger model",
+    "yolov8l.pt - High accuracy, resource-intensive",
+    "yolov8x.pt - Very high accuracy, requires significant processing power"
+]
+model_name = st.selectbox(
+    "Select a YOLO model to begin:", 
+    model_choices,
+    help="Select a model based on your device capabilities and accuracy needs."
+)
+
+model_path = model_name.split(" - ")[0].strip()  # Extract the actual model name
 
 # Step 2: Class selection
-st.write("### Select Classes to Filter")
-model = YOLO(model_name)  # Load model temporarily to get classes
+st.write("### Step 2: Select Classes to Filter 🏷️")
+model = YOLO(model_path)  # Load model temporarily to get classes
 all_classes = {int(k): v for k, v in model.names.items()}
-selected_class_names = st.multiselect("Select the classes you want to detect:", list(all_classes.values()))
+selected_class_names = st.multiselect(
+    "Select the classes you want to detect:",
+    list(all_classes.values()),
+    help="Choose specific object classes to narrow down the detection."
+)
 selected_class_ids = [k for k, v in all_classes.items() if v in selected_class_names]
 
 # Step 3: Confidence threshold
-confidence_threshold = st.slider("Confidence Threshold:", min_value=0.0, max_value=1.0, value=0.25, step=0.05)
+st.write("### Step 3: Set Confidence Threshold 🎛️")
+confidence_threshold = st.slider(
+    "Confidence Threshold:",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.25,
+    step=0.05,
+    help="Adjust the confidence level for object detection."
+)
 
 # Step 4: Upload a video or image
-uploaded_file = st.file_uploader("Upload an Image or Video (Max 50MB):", type=["jpg", "jpeg", "png", "mp4"])
+st.write("### Step 4: Upload Your File 📂")
+uploaded_file = st.file_uploader(
+    "Upload an Image or Video (Max 50MB):",
+    type=["jpg", "jpeg", "png", "mp4"],
+    help="Upload a photo or video to see the YOLO model in action."
+)
 
 # Check if a new file is uploaded
 if uploaded_file and (st.session_state["uploaded_file_path"] != uploaded_file.name):
@@ -115,10 +166,10 @@ if uploaded_file and (st.session_state["uploaded_file_path"] != uploaded_file.na
     file_type = "image" if file_ext in ["jpg", "jpeg", "png"] else "video"
 
     # Run YOLO and process the file
-    st.write("### Running detection...")
+    st.write("### Running detection... 🚀")
     with st.spinner("Detecting objects. This might take a while..."):
         processed_file = run_yolo_and_process(
-            model_path=model_name,
+            model_path=model_path,
             input_file_path=input_path,
             output_dir=output_dir,
             confidence=confidence_threshold,
@@ -132,15 +183,15 @@ if st.session_state["processed_file"]:
     if os.path.exists(st.session_state["processed_file"]):
         file_ext = st.session_state["processed_file"].split(".")[-1].lower()
         if file_ext in ["mp4"]:
-            st.write("### Annotated Output Video")
+            st.write("### Annotated Output Video 🎥")
             st.video(st.session_state["processed_file"])
         else:
-            st.write("### Annotated Output Image")
+            st.write("### Annotated Output Image 🖼️")
             st.image(st.session_state["processed_file"])
 
         with open(st.session_state["processed_file"], "rb") as file:
             st.download_button(
-                label="Download Annotated File",
+                label="Download Annotated File 📥",
                 data=file,
                 file_name=f"annotated_{st.session_state['uploaded_file_path']}",
                 mime="video/mp4" if file_ext == "mp4" else "image/jpeg"
@@ -148,16 +199,14 @@ if st.session_state["processed_file"]:
     else:
         st.error("Processed file not found. Please try again.")
 elif uploaded_file is None:
-    # Do not show any error message if no file has been uploaded
     pass
-
 
 # Cleanup temporary files
 if st.session_state["processed_file"] is None and st.session_state["uploaded_file_path"] is None:
     if os.path.exists("temp_input"):
         shutil.rmtree("temp_input", ignore_errors=True)
-
     if os.path.exists("temp_output"):
         shutil.rmtree("temp_output", ignore_errors=True)
-        
-        
+
+# Display credits at the bottom
+display_credits()
