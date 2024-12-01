@@ -7,7 +7,7 @@ import shutil
 def display_credits():
     st.markdown("---")
     st.markdown("### About this Web App")
-    st.write("This web application was developed by [Fatih Karahan].")
+    st.write("This web application was developed by Fatih Karahan.")
     
     # Contact and social links
     st.markdown("""
