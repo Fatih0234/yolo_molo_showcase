@@ -261,6 +261,13 @@ if mode == "File Upload":
 
 elif mode == "Real-Time Camera":
     st.write("### Real-Time Camera Detection 🎥")
+    # Warning message for users
+    st.warning("""
+    ⚠️ **Important Note:**
+    - The live camera mode may not work on certain browsers or devices due to browser compatibility or permissions.
+    - If you experience issues, try switching to a different browser or device.
+    - Please be patient while the camera initializes, as it may take a moment to load.
+    """)
 
     # Proceed with WebRTC setup
     webrtc_streamer(
