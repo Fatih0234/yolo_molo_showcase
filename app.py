@@ -50,7 +50,7 @@ def display_credits():
     **Contact Details:**
 
     - 📧 Email: [sekanti02@gmail.com](mailto:sekanti02@gmail.com)
-    - 💼 LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/fatih-karahan-717931193/)
+    - 💼 LinkedIn: [LinkedIn Profile](https://www.linkedin.com/in/fatih-karahan-717931193/)
     - 🐙 GitHub: [GitHub Repository](https://github.com/Fatih0234/yolo_molo_showcase)
     - 🌐 Portfolio: [Portfolio Website](https://portfolio-app-fatihkarahan.streamlit.app/)
     """)
