@@ -135,9 +135,15 @@ Welcome to the **YOLO Ultralytics Object Detection Playground**! This web app al
 2. **Filter Classes**: Specify the object classes you want to detect from the COCO dataset.
 3. **Set Confidence Levels**: Adjust the detection confidence threshold to fine-tune the results.
 4. **Upload Files**: Upload images or videos to see YOLO in action under different settings.
+5. **Live Camera Detection**: Use your device's camera to see real-time object detection (browser compatibility required).
 
-📝 **Pro Tip:** Start by selecting a model, then choose classes, adjust confidence, and finally upload your file.
+📝 **Modes Available:**
+- **File Upload Mode**: Upload an image or video (up to 50MB) to run object detection and download the annotated results.
+- **Real-Time Camera Mode**: Use your camera for live detection. Please note that this mode might not work on certain browsers or devices. If you face issues, consider switching to a different browser or device and be patient while the camera initializes.
+
+**Pro Tip:** Start by selecting a model, then choose classes, adjust confidence, and finally upload your file or switch to live camera mode for real-time detection.
 """)
+
 
 # Step 1: Model selection
 st.write("### Step 1: Choose a YOLO Model 🔍")
