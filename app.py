@@ -40,11 +40,10 @@ class YOLOVideoTransformer(VideoTransformerBase):
         return annotated_frame
 
 
-# Function to display author credits
 def display_credits():
     st.markdown("---")
     st.markdown("### About this Web App")
-    st.write("This web application was developed by Fatih Karahan.")
+    st.write("This web application was developed by [Fatih Karahan](https://portfolio-app-fatihkarahan.streamlit.app/).")
     
     # Contact and social links
     st.markdown("""
@@ -53,6 +52,7 @@ def display_credits():
     - 📧 Email: [sekanti02@gmail.com](mailto:sekanti02@gmail.com)
     - 💼 LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/fatih-karahan-717931193/)
     - 🐙 GitHub: [GitHub Repository](https://github.com/Fatih0234/yolo_molo_showcase)
+    - 🌐 Portfolio: [Portfolio Website](https://portfolio-app-fatihkarahan.streamlit.app/)
     """)
     st.write("Feel free to reach out for feedback, suggestions, or collaborations!")
     st.markdown("---")
