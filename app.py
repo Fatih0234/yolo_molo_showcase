@@ -2,6 +2,43 @@ import streamlit as st
 from ultralytics import YOLO
 import os
 import shutil
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
+import numpy as np
+
+RTC_CONFIGURATION = RTCConfiguration(
+    {
+        "iceServers": [
+            {"urls": "stun:stun.l.google.com:19302"},
+            {"urls": "stun:stun1.l.google.com:19302"},
+            {"urls": "stun:stun2.l.google.com:19302"},
+            {"urls": "stun:stun3.l.google.com:19302"},
+            {"urls": "stun:stun4.l.google.com:19302"}
+        ]
+    }
+)
+
+# Updated YOLOVideoTransformer class
+class YOLOVideoTransformer(VideoTransformerBase):
+    def __init__(self, model, confidence, selected_classes):
+        self.model = model
+        self.confidence = confidence
+        self.selected_classes = selected_classes
+        
+
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")  # Convert frame to NumPy array
+
+        # Run YOLO inference
+        results = self.model.predict(
+            source=img,
+            conf=self.confidence,
+            classes=self.selected_classes
+        )
+
+        # Annotate frame with detection results
+        annotated_frame = results[0].plot()
+        return annotated_frame
+
 
 # Function to display author credits
 def display_credits():
@@ -118,7 +155,8 @@ model_name = st.selectbox(
 )
 
 model_path = model_name.split(" - ")[0].strip()  # Extract the actual model name
-
+# Load the YOLO model once
+yolo_model = YOLO(model_path)
 # Step 2: Class selection
 st.write("### Step 2: Select Classes to Filter 🏷️")
 model = YOLO(model_path)  # Load model temporarily to get classes
@@ -130,8 +168,9 @@ selected_class_names = st.multiselect(
 )
 selected_class_ids = [k for k, v in all_classes.items() if v in selected_class_names]
 
-# Step 3: Confidence threshold
-st.write("### Step 3: Set Confidence Threshold 🎛️")
+st.write("### Detection Parameters")
+
+# Confidence slider on the main page
 confidence_threshold = st.slider(
     "Confidence Threshold:",
     min_value=0.0,
@@ -141,72 +180,94 @@ confidence_threshold = st.slider(
     help="Adjust the confidence level for object detection."
 )
 
-# Step 4: Upload a video or image
-st.write("### Step 4: Upload Your File 📂")
-uploaded_file = st.file_uploader(
-    "Upload an Image or Video (Max 50MB):",
-    type=["jpg", "jpeg", "png", "mp4"],
-    help="Upload a photo or video to see the YOLO model in action."
+
+mode = st.sidebar.radio(
+    "Select Mode:",
+    options=["File Upload", "Real-Time Camera"],
+    help="Choose between uploading files for detection or using your camera in real-time."
 )
 
-# Check if a new file is uploaded
-if uploaded_file and (st.session_state["uploaded_file_path"] != uploaded_file.name):
-    # Save the uploaded file temporarily
-    input_path = os.path.join("temp_input", uploaded_file.name)
-    os.makedirs("temp_input", exist_ok=True)
-    save_uploaded_file(uploaded_file, input_path)
-    st.session_state["uploaded_file_path"] = uploaded_file.name
+if mode == "File Upload":
+    st.write("### File Upload Mode 📂")
+    uploaded_file = st.file_uploader(
+        "Upload an Image or Video (Max 50MB):",
+        type=["jpg", "jpeg", "png", "mp4"],
+        help="Upload a photo or video to see the YOLO model in action."
+    )
+    # Check if a new file is uploaded
+    if uploaded_file and (st.session_state["uploaded_file_path"] != uploaded_file.name):
+        # Save the uploaded file temporarily
+        input_path = os.path.join("temp_input", uploaded_file.name)
+        os.makedirs("temp_input", exist_ok=True)
+        save_uploaded_file(uploaded_file, input_path)
+        st.session_state["uploaded_file_path"] = uploaded_file.name
 
-    # Output directory for annotated files
-    output_dir = "temp_output"
-    os.makedirs(output_dir, exist_ok=True)
+        # Output directory for annotated files
+        output_dir = "temp_output"
+        os.makedirs(output_dir, exist_ok=True)
 
-    # Determine file type (image or video)
-    file_ext = uploaded_file.name.split(".")[-1].lower()
-    file_type = "image" if file_ext in ["jpg", "jpeg", "png"] else "video"
+        # Determine file type (image or video)
+        file_ext = uploaded_file.name.split(".")[-1].lower()
+        file_type = "image" if file_ext in ["jpg", "jpeg", "png"] else "video"
 
-    # Run YOLO and process the file
-    st.write("### Running detection... 🚀")
-    with st.spinner("Detecting objects. This might take a while..."):
-        processed_file = run_yolo_and_process(
-            model_path=model_path,
-            input_file_path=input_path,
-            output_dir=output_dir,
+        # Run YOLO and process the file
+        st.write("### Running detection... 🚀")
+        with st.spinner("Detecting objects. This might take a while..."):
+            processed_file = run_yolo_and_process(
+                model_path=model_path,
+                input_file_path=input_path,
+                output_dir=output_dir,
+                confidence=confidence_threshold,
+                selected_classes=selected_class_ids,
+                file_type=file_type
+            )
+            st.session_state["processed_file"] = processed_file
+
+    # Display results only if a file has been uploaded and processed
+    if st.session_state["processed_file"]:
+        if os.path.exists(st.session_state["processed_file"]):
+            file_ext = st.session_state["processed_file"].split(".")[-1].lower()
+            if file_ext in ["mp4"]:
+                st.write("### Annotated Output Video 🎥")
+                st.video(st.session_state["processed_file"])
+            else:
+                st.write("### Annotated Output Image 🖼️")
+                st.image(st.session_state["processed_file"])
+
+            with open(st.session_state["processed_file"], "rb") as file:
+                st.download_button(
+                    label="Download Annotated File 📥",
+                    data=file,
+                    file_name=f"annotated_{st.session_state['uploaded_file_path']}",
+                    mime="video/mp4" if file_ext == "mp4" else "image/jpeg"
+                )
+        else:
+            st.error("Processed file not found. Please try again.")
+    elif uploaded_file is None:
+        pass
+
+    # Cleanup temporary files
+    if st.session_state["processed_file"] is None and st.session_state["uploaded_file_path"] is None:
+        if os.path.exists("temp_input"):
+            shutil.rmtree("temp_input", ignore_errors=True)
+        if os.path.exists("temp_output"):
+            shutil.rmtree("temp_output", ignore_errors=True)
+
+elif mode == "Real-Time Camera":
+    st.write("### Real-Time Camera Detection 🎥")
+
+    # Proceed with WebRTC setup
+    webrtc_streamer(
+        key="realtime-yolo",
+        video_processor_factory=lambda: YOLOVideoTransformer(
+            model=yolo_model,
             confidence=confidence_threshold,
             selected_classes=selected_class_ids,
-            file_type=file_type
-        )
-        st.session_state["processed_file"] = processed_file
+        ),
+        rtc_configuration=RTC_CONFIGURATION,
+        media_stream_constraints={"video": True, "audio": False},
+    )
 
-# Display results only if a file has been uploaded and processed
-if st.session_state["processed_file"]:
-    if os.path.exists(st.session_state["processed_file"]):
-        file_ext = st.session_state["processed_file"].split(".")[-1].lower()
-        if file_ext in ["mp4"]:
-            st.write("### Annotated Output Video 🎥")
-            st.video(st.session_state["processed_file"])
-        else:
-            st.write("### Annotated Output Image 🖼️")
-            st.image(st.session_state["processed_file"])
-
-        with open(st.session_state["processed_file"], "rb") as file:
-            st.download_button(
-                label="Download Annotated File 📥",
-                data=file,
-                file_name=f"annotated_{st.session_state['uploaded_file_path']}",
-                mime="video/mp4" if file_ext == "mp4" else "image/jpeg"
-            )
-    else:
-        st.error("Processed file not found. Please try again.")
-elif uploaded_file is None:
-    pass
-
-# Cleanup temporary files
-if st.session_state["processed_file"] is None and st.session_state["uploaded_file_path"] is None:
-    if os.path.exists("temp_input"):
-        shutil.rmtree("temp_input", ignore_errors=True)
-    if os.path.exists("temp_output"):
-        shutil.rmtree("temp_output", ignore_errors=True)
 
 # Display credits at the bottom
 display_credits()
