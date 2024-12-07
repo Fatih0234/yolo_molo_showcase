@@ -86,38 +86,44 @@ def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, se
 
     # Handle different file types
     if file_type == "video":
-        # Process video
-        output_avi_path = os.path.abspath(os.path.join(run_folder, os.path.basename(input_file_path).replace(".mp4", ".avi")))
-        output_mp4_path = output_avi_path.replace(".avi", ".mp4")
-
-        if not os.path.exists(output_avi_path):
-            raise FileNotFoundError(f"AVI file not found: {output_avi_path}")
-
-        try:
+        # Find the output video path
+        output_files = [
+            os.path.join(run_folder, f) for f in os.listdir(run_folder)
+            if f.endswith((".mp4", ".mov", ".avi"))
+        ]
+        if not output_files:
+            raise FileNotFoundError("Processed video file not found.")
+        
+        output_video_path = output_files[0]  # Use the first matching file
+        if not output_video_path.endswith(".mp4"):
             # Convert to MP4
-            import subprocess
-            subprocess.run(
-                [
-                    "ffmpeg",
-                    "-i", output_avi_path,
-                    "-vcodec", "libx264",
-                    "-preset", "fast",
-                    "-crf", "22",
-                    output_mp4_path
-                ],
-                check=True
-            )
-            os.remove(output_avi_path)  # Cleanup AVI file
-            return output_mp4_path
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"FFmpeg conversion failed: {e}")
+            converted_path = output_video_path.rsplit(".", 1)[0] + ".mp4"
+            try:
+                import subprocess
+                subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-i", output_video_path,
+                        "-vcodec", "libx264",
+                        "-preset", "fast",
+                        "-crf", "22",
+                        converted_path
+                    ],
+                    check=True
+                )
+                os.remove(output_video_path)  # Cleanup original file
+                return converted_path
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"FFmpeg conversion failed: {e}")
+        return output_video_path
 
     elif file_type == "image":
         # Process image
-        output_image_path = os.path.abspath(os.path.join(run_folder, os.path.basename(input_file_path)))
+        output_image_path = os.path.join(run_folder, os.path.basename(input_file_path))
         if not os.path.exists(output_image_path):
             raise FileNotFoundError(f"Processed image not found: {output_image_path}")
         return output_image_path
+
 
 
 # Initialize Streamlit session state
