@@ -70,7 +70,7 @@ def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, se
     # Remove the run folder if it exists
     if os.path.exists(run_folder):
         shutil.rmtree(run_folder)
-    
+
     # Load YOLO model
     model = YOLO(model_path)
 
@@ -84,8 +84,15 @@ def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, se
         classes=selected_classes
     )
 
+    # Debugging: Print YOLO results directory
+    st.write(f"YOLO results directory: {results[0].save_dir if results else 'No results'}")
+
     # Handle different file types
     if file_type == "video":
+        # Verify that the run folder exists
+        if not os.path.exists(run_folder):
+            raise FileNotFoundError(f"Output folder not found: {run_folder}")
+
         # Find the output video path
         output_files = [
             os.path.join(run_folder, f) for f in os.listdir(run_folder)
@@ -93,7 +100,7 @@ def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, se
         ]
         if not output_files:
             raise FileNotFoundError("Processed video file not found.")
-        
+
         output_video_path = output_files[0]  # Use the first matching file
         if not output_video_path.endswith(".mp4"):
             # Convert to MP4
