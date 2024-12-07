@@ -105,6 +105,7 @@ def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, se
         if not output_files:
             raise FileNotFoundError("Processed video file not found.")
 
+
         output_video_path = output_files[0]  # Use the first matching file
         if not output_video_path.endswith(".mp4"):
             # Convert to MP4
