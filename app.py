@@ -194,12 +194,13 @@ mode = st.sidebar.radio(
 )
 
 if mode == "File Upload":
-    st.write("### File Upload Mode 📂")
+    # Update File Upload Section
     uploaded_file = st.file_uploader(
         "Upload an Image or Video (Max 50MB):",
-        type=["jpg", "jpeg", "png", "mp4"],
+        type=["jpg", "jpeg", "png", "mp4", "mov"],  # Added "mov"
         help="Upload a photo or video to see the YOLO model in action."
     )
+
     # Check if a new file is uploaded
     if uploaded_file and (st.session_state["uploaded_file_path"] != uploaded_file.name):
         # Save the uploaded file temporarily
@@ -215,6 +216,29 @@ if mode == "File Upload":
         # Determine file type (image or video)
         file_ext = uploaded_file.name.split(".")[-1].lower()
         file_type = "image" if file_ext in ["jpg", "jpeg", "png"] else "video"
+
+        # Convert .mov to .mp4 if needed
+        if file_ext == "mov":
+            converted_path = input_path.replace(".mov", ".mp4")
+            try:
+                import subprocess
+                st.write("### Converting .mov to .mp4 format... 🔄")
+                subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-i", input_path,
+                        "-vcodec", "libx264",
+                        "-preset", "fast",
+                        "-crf", "22",
+                        converted_path
+                    ],
+                    check=True
+                )
+                st.write("Conversion successful! Proceeding with detection.")
+                input_path = converted_path
+            except subprocess.CalledProcessError as e:
+                st.error(f"FFmpeg conversion failed: {e}")
+                raise RuntimeError("Failed to convert .mov file to .mp4 format.")
 
         # Run YOLO and process the file
         st.write("### Running detection... 🚀")
