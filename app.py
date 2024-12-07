@@ -62,7 +62,6 @@ def save_uploaded_file(uploaded_file, save_path):
     with open(save_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     return save_path
-
 def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, selected_classes, file_type):
     # Define the run folder path
     run_folder = os.path.join(output_dir, "run")
@@ -84,8 +83,13 @@ def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, se
         classes=selected_classes
     )
 
-    # Debugging: Print YOLO results directory
-    st.write(f"YOLO results directory: {results[0].save_dir if results else 'No results'}")
+    # Debugging: Print YOLO results directory and list its contents
+    save_dir = results[0].save_dir if results else None
+    st.write(f"YOLO results directory: {save_dir}")
+    if save_dir:
+        st.write("Contents of results directory:", os.listdir(save_dir))
+    else:
+        raise FileNotFoundError("YOLO did not save any results.")
 
     # Handle different file types
     if file_type == "video":
@@ -130,6 +134,7 @@ def run_yolo_and_process(model_path, input_file_path, output_dir, confidence, se
         if not os.path.exists(output_image_path):
             raise FileNotFoundError(f"Processed image not found: {output_image_path}")
         return output_image_path
+
 
 
 
